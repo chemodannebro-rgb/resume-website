@@ -420,20 +420,43 @@
     }
 
     .tl-item {
-      background: var(--s1);
+      background: #FFFFFF;
       border: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
       border-radius: var(--r);
       padding: 24px 28px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+    }
+    html[data-theme="dark"] .tl-item {
+      background: var(--s1);
+      box-shadow: none;
+    }
+    html[data-theme="dark"] .tl-item:hover {
+      box-shadow: 0 8px 36px rgba(212, 82, 27, 0.20), 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--grad);
+      opacity: 0;
+      transition: opacity 0.22s;
     }
 
     .tl-item:hover {
-      border-color: var(--border2);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      border-color: transparent;
+      box-shadow: 0 8px 36px rgba(212, 82, 27, 0.20), 0 2px 10px rgba(0,0,0,0.08);
+      transform: translateY(-3px);
     }
+
+    .tl-item:hover::before { opacity: 1; }
 
     .tl-yr {
       font-size: 0.6875rem; font-weight: 600; white-space: nowrap;
@@ -483,6 +506,8 @@
       filter: blur(8px);
       z-index: 0;
     }
+
+    .contact-fox picture { display: contents; }
 
     .contact-fox img {
       width: 200%;
@@ -652,9 +677,12 @@
 
     /* Smooth theme transitions */
     body { transition: background-color 0.35s ease, color 0.35s ease; }
-    section, footer, .tl-item, .tl-dot, .sk-item, .c-item, .m-item, .val-item,
+    section, footer, .tl-dot, .sk-item, .c-item, .m-item, .val-item,
     .contact-link, .contact-link-icon, .hero-badge, .ft {
       transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+    }
+    .tl-item {
+      transition: background-color 0.35s ease, border-color 0.22s ease, color 0.35s ease, box-shadow 0.22s ease, transform 0.22s ease;
     }
 
     /* ─── THEME TOGGLE ─────────────────────────────────────────── */
