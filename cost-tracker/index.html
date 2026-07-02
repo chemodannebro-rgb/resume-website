@@ -40,6 +40,11 @@
       --violet2:  #8B6EE0;
       --grad:     linear-gradient(135deg, #D4521B 0%, #6B4FC8 100%);
       --grad2:    linear-gradient(135deg, #E8632A 0%, #8B6EE0 100%);
+      --code-keyword: #B14A17;
+      --code-string:  #4F7942;
+      --code-number:  #6B4FC8;
+      --code-func:    #2E6E8E;
+      --code-comment: #948B7E;
       --r:        14px;
     }
 
@@ -145,13 +150,70 @@
       background: var(--s1);
       border: 1px solid var(--border);
       border-radius: var(--r);
-      padding: 20px 22px;
-      overflow-x: auto;
-      margin-bottom: 20px;
+      padding: 20px 52px 20px 22px;
+      margin-bottom: 0;
       color: var(--text2);
     }
 
-    pre code { color: inherit; white-space: pre; }
+    pre code {
+      color: inherit;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    /* ─── CODE BLOCK WRAPPER (copy + collapse) ───────────────── */
+    .code-block { margin-bottom: 20px; }
+
+    .code-collapse-wrap { position: relative; }
+    .code-block.collapsible .code-collapse-wrap { cursor: pointer; }
+    .code-block.collapsible .code-collapse-wrap pre { transition: max-height 0.3s ease; }
+
+    .code-copy-btn {
+      position: absolute; top: 10px; right: 10px; z-index: 3;
+      display: flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px;
+      color: var(--muted);
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+      transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+    }
+
+    .code-copy-btn:hover { color: var(--orange); border-color: rgba(212,82,27,0.35); }
+    .code-copy-btn.copied { color: #2E9E5B; border-color: rgba(46,158,91,0.4); }
+    .code-copy-btn.copy-failed { color: #C0392B; border-color: rgba(192,57,43,0.4); }
+    .code-copy-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+    .code-block.collapsible .code-collapse-wrap pre {
+      max-height: 260px;
+      overflow: hidden;
+    }
+
+    .code-block.collapsible.expanded .code-collapse-wrap pre {
+      max-height: none;
+    }
+
+    .code-fade {
+      position: absolute; left: 1px; right: 1px; bottom: 1px; height: 64px;
+      background: linear-gradient(to bottom, transparent, var(--s1) 75%);
+      border-radius: 0 0 calc(var(--r) - 1px) calc(var(--r) - 1px);
+      pointer-events: none;
+    }
+
+    .code-block.expanded .code-fade { display: none; }
+
+    /* ─── SYNTAX HIGHLIGHTING ─────────────────────────────────── */
+    .hljs { background: transparent; color: inherit; }
+    .hljs-keyword, .hljs-literal { color: var(--code-keyword); font-weight: 600; }
+    .hljs-string { color: var(--code-string); }
+    .hljs-comment { color: var(--code-comment); font-style: italic; }
+    .hljs-number { color: var(--code-number); }
+    .hljs-title.function_, .hljs-title.class_, .hljs-built_in { color: var(--code-func); }
+    .hljs-attr, .hljs-property, .hljs-params { color: var(--text2); }
 
     .callout {
       background: rgba(155,127,234,0.06);
@@ -219,6 +281,11 @@
       --text:    #F0EBE0;
       --text2:   #C0B8AD;
       --muted:   #8A7E6E;
+      --code-keyword: #E8814A;
+      --code-string:  #8FBB7A;
+      --code-number:  #A98FE8;
+      --code-func:    #6FB3D9;
+      --code-comment: #7A6E5E;
     }
 
     /* ─── MOBILE ──────────────────────────────────────────────── */
@@ -227,6 +294,8 @@
       pre { padding: 16px 16px; font-size: 0.75rem; }
       .theme-toggle { width: 34px; height: 34px; top: 16px; right: 16px; }
       .theme-toggle svg { width: 14px; height: 14px; }
+      .code-copy-btn { width: 28px; height: 28px; top: 8px; right: 8px; }
+      .code-copy-btn svg { width: 13px; height: 13px; }
     }
   </style>
 </head>
@@ -263,26 +332,24 @@
     <div class="container">
 
       <h2>Зачем это нужно</h2>
-      <p>Если вы используете нейросеть (ChatGPT, Claude и подобные) через программный доступ (API) — каждый запрос стоит денег. Цена списывается не «за сообщение», а за количество <strong>токенов</strong> — это кусочки, на которые нейросеть разбивает текст (примерно ¾ слова). Чем длиннее вопрос и чем длиннее ответ — тем дороже запрос.</p>
-      <p>Если у вас не один запрос, а цепочка из нескольких — например, агент сначала разбирает вопрос, потом ищет информацию, потом формирует ответ — на глаз посчитать, сколько всё это стоило, почти невозможно.</p>
-      <p><strong>CostTracker</strong> решает именно это: после каждого запроса к нейросети вы одной строкой сообщаете ему, сколько было потрачено токенов, а он сам считает стоимость в долларах и в конце показывает понятную таблицу с итогом.</p>
+      <p>Каждый запрос к нейросети через API стоит денег: цена считается не «за сообщение», а по числу <strong>токенов</strong> — кусочков текста размером примерно в ¾ слова. Если запросов несколько подряд, например когда агент сначала разбирает вопрос, потом ищет информацию и затем формирует ответ, прикинуть общую стоимость на глаз почти нереально.</p>
+      <p><strong>CostTracker</strong> решает эту задачу — одной строкой после каждого запроса вы сообщаете ему число потраченных токенов, а он сам считает стоимость каждого шага и в конце показывает таблицу с итогом.</p>
 
       <h2>Как это устроено</h2>
-      <p>Инструмент <strong>не оборачивает</strong> и не заменяет ваш запрос к нейросети. Он ничего не знает про Anthropic, OpenAI или любой другой сервис — и не пытается быть посредником между вами и API. Вы вызываете модель ровно так, как вызывали раньше, а сразу после ответа одной строкой сообщаете трекеру, сколько токенов потрачено — это значение сервис и так возвращает вместе с ответом.</p>
-      <p>Инструмент не отслеживает ваш код сам и не «видит» диалог с нейросетью — он строго реагирует на то, что вы явно ему передали. «Шаг» в отчёте — это не то, что инструмент сам обнаружил, а ровно один вызов, который вы сами залогировали. Если забыть добавить строку после какого-то из запросов — этот запрос просто не попадёт в отчёт, без предупреждения об ошибке.</p>
+      <p>Инструмент <strong>не вмешивается</strong> в ваш запрос к нейросети и не заменяет его. Он ничего не знает про Anthropic, OpenAI или любой другой сервис и не пытается быть посредником между вами и API. Вы вызываете модель ровно так, как вызывали раньше, а сразу после ответа одной строкой сообщаете трекеру, сколько токенов потрачено. Это значение сервис и так возвращает вместе с ответом.</p>
 
       <h2>Что нужно, чтобы начать</h2>
       <ul>
         <li>Python (подойдёт практически любая версия, начиная с 3.7)</li>
-        <li>Свой код, который уже обращается к нейросети (через Anthropic, OpenAI или любой другой сервис) — CostTracker не заменяет и не трогает эту часть, а просто досчитывает стоимость рядом</li>
+        <li>Свой код, который уже обращается к нейросети через Anthropic, OpenAI или любой другой сервис</li>
       </ul>
-      <p>Если своего кода с обращением к нейросети пока нет — можно всё равно скопировать инструмент и попробовать на готовом примере из шага 5, чтобы увидеть, как это работает.</p>
+      <p>Если своего кода с обращением к нейросети пока нет, можно всё равно скопировать инструмент и попробовать на готовом примере из шага 5, чтобы увидеть, как это работает.</p>
 
       <h2 class="step"><span class="step-num">1</span> Создайте папку и два файла</h2>
       <p>В своём проекте создайте папку, например <code class="inline">cost_tracker</code>, и положите в неё два файла: <code class="inline">cost_tracker.py</code> и <code class="inline">pricing.json</code>.</p>
 
       <h2 class="step"><span class="step-num">2</span> Скопируйте это в файл cost_tracker.py</h2>
-<pre><code>"""
+<pre><code class="language-python">"""
 CostTracker — простой счётчик стоимости вызовов LLM.
 """
 
@@ -387,12 +454,12 @@ class CostTracker:
       <h3>Как читать эти числа</h3>
       <p>У каждой модели два числа: <code class="inline">input</code> и <code class="inline">output</code>.</p>
       <ul>
-        <li><strong>input</strong> — во сколько обходится то, что вы <strong>отправляете</strong> нейросети (ваш вопрос, инструкции, документы). Это то, что модель <strong>читает</strong>.</li>
-        <li><strong>output</strong> — во сколько обходится то, что нейросеть <strong>отвечает</strong>. Это то, что модель <strong>написала</strong>. Ответ почти всегда дороже вопроса.</li>
+        <li><strong>input</strong> — во сколько обходится то, что вы отправляете нейросети: вопрос, инструкции, документы. Это то, что модель читает.</li>
+        <li><strong>output</strong> — во сколько обходится ответ нейросети, то есть то, что она написала. Он почти всегда дороже вопроса.</li>
       </ul>
-      <p>Оба числа — это <strong>доллары за 1 000 000 (один миллион) токенов</strong>, ровно так, как их публикует сам сервис на своей странице цен. Не «доллар за токен» — токенов в одном запросе обычно от силы пара тысяч, поэтому цену считают именно на миллион, иначе получались бы неудобные копейки вроде $0.000003. Само число токенов вам считать не нужно — его возвращает сервис вместе с каждым ответом, вы просто передаёте его трекеру как есть.</p>
+      <p>Оба числа — доллары за миллион токенов, как их публикует сам сервис на странице цен. Число токенов считать самим не нужно: сервис возвращает его вместе с каждым ответом, вы просто передаёте это значение трекеру.</p>
 
-<pre><code>{
+<pre><code class="language-json">{
   "_meta": {
     "note": "Цены за 1 000 000 токенов, в долларах. Официального API 'текущая цена' ни у одного провайдера нет — эти цифры сверены вручную по документации на дату ниже.",
     "checked_on": "2026-07-02",
@@ -418,14 +485,14 @@ class CostTracker:
 output_cost = 180  / 1_000_000 * 15.0  = $0.0027
 итого       = $0.0036 + $0.0027 = $0.0063</code></pre>
 
-      <div class="callout"><strong>Важный нюанс.</strong> Ни один провайдер — ни Anthropic, ни OpenAI — не даёт способа узнать «текущую цену» автоматически, такого API попросту не существует. Цены время от времени меняются вручную самим провайдером, поэтому раз в какое-то время стоит заглянуть на официальную страницу цен и поправить нужное число в этом файле. Код трогать при этом не нужно — только цифры в JSON.</div>
+      <div class="callout"><strong>Важный нюанс.</strong> Ни один провайдер, ни Anthropic, ни OpenAI, не даёт способа узнать «текущую цену» автоматически, такого API попросту не существует. Цены время от времени меняются вручную самим провайдером, поэтому раз в какое-то время стоит заглянуть на официальную страницу цен и поправить нужное число в этом файле. Код трогать не нужно, только цифры в JSON.</div>
 
-      <p>Если модели, которую вы используете, нет в списке — ничего страшного: программа не сломается, просто в отчёте у этого шага будет написано «цена неизвестна» вместо суммы. Можно просто дописать свою строку с моделью и её ценой по такому же образцу.</p>
+      <p>Если модели, которую вы используете, нет в списке, ничего страшного: программа не сломается, а в отчёте у этого шага будет написано «цена неизвестна» вместо суммы. Можно дописать свою строку с моделью и её ценой по такому же образцу.</p>
 
       <h2 class="step"><span class="step-num">4</span> Как это использовать в своём коде</h2>
-      <p>Ваш обычный код, где вы обращаетесь к нейросети, <strong>менять не нужно</strong>. Добавляется только одна строка сразу после ответа — вы берёте из ответа количество потраченных токенов (сервис возвращает эту информацию сам) и передаёте трекеру.</p>
+      <p>Ваш обычный код, где вы обращаетесь к нейросети, <strong>менять не нужно</strong>. Добавляется только одна строка сразу после ответа: вы берёте из ответа количество потраченных токенов, которое сервис и так возвращает, и передаёте его трекеру.</p>
 
-<pre><code>from cost_tracker import CostTracker
+<pre><code class="language-python">from cost_tracker import CostTracker
 
 tracker = CostTracker()
 
@@ -443,23 +510,23 @@ tracker.log_call(
 # когда захотите посмотреть, сколько всё стоило:
 print(tracker.report())</code></pre>
 
-      <p>Если используете OpenAI — то же самое, просто поля с токенами называются иначе:</p>
+      <p>При работе с OpenAI всё то же самое, только поля с токенами называются иначе:</p>
 
-<pre><code>response = client.chat.completions.create(...)
+<pre><code class="language-python">response = client.chat.completions.create(...)
 tracker.log_call(
     model="gpt-4.1",
     input_tokens=response.usage.prompt_tokens,
     output_tokens=response.usage.completion_tokens,
 )</code></pre>
 
-      <p><code class="inline">tracker.report()</code> можно вызывать где угодно и когда угодно — хоть после каждого ответа, хоть в самом конце. Сам он ничего никуда не выводит и не сохраняет — печатает то, что вы попросите, и когда попросите.</p>
+      <p><code class="inline">tracker.report()</code> можно вызывать где угодно и когда угодно, хоть после каждого ответа, хоть в самом конце. Сам он ничего никуда не выводит и не сохраняет, а печатает то, что вы попросите и когда попросите.</p>
 
-      <div class="callout"><strong>Если вызовов модели несколько.</strong> Если ваш агент делает не один, а несколько обращений к модели подряд (например: сначала разобрать запрос, потом поискать информацию, потом собрать ответ) — строку <code class="inline">log_call()</code> нужно вставлять после каждого такого обращения, а не один раз в начале. Инструмент не отслеживает ваш код сам и не знает, сколько раз вы обращались к модели — он видит ровно столько шагов, сколько раз вы сами вызвали <code class="inline">log_call()</code>. Если забыть вставить эту строку после одного из вызовов — этот вызов просто не попадёт в отчёт, без какого-либо предупреждения об ошибке.</div>
+      <div class="callout"><strong>Если вызовов модели несколько.</strong> Если ваш агент делает несколько обращений к модели подряд, например сначала разбирает запрос, потом ищет информацию, потом собирает ответ, строку <code class="inline">log_call()</code> нужно вставлять после каждого такого обращения, а не один раз в начале. Инструмент не отслеживает ваш код сам: он видит ровно столько шагов, сколько раз вы вызвали <code class="inline">log_call()</code>. Если забыть вставить эту строку после одного из вызовов, этот вызов просто не попадёт в отчёт, без какого-либо предупреждения об ошибке.</div>
 
       <h2 class="step"><span class="step-num">5</span> Проверьте, что всё работает</h2>
-      <p>Если хотите сразу увидеть, как выглядит результат — без реального запроса к нейросети — создайте рядом третий файл <code class="inline">try_it.py</code> с таким содержимым:</p>
+      <p>Если хотите сразу увидеть, как выглядит результат, не делая реального запроса к нейросети, создайте рядом третий файл <code class="inline">try_it.py</code> с таким содержимым:</p>
 
-<pre><code>from cost_tracker import CostTracker
+<pre><code class="language-python">from cost_tracker import CostTracker
 
 tracker = CostTracker()
 
@@ -480,7 +547,7 @@ tracker.log_call(
 print(tracker.report())</code></pre>
 
       <p>И запустите его в терминале:</p>
-<pre><code>python3 try_it.py</code></pre>
+<pre><code class="language-bash">python3 try_it.py</code></pre>
 
       <p>Вы увидите готовую таблицу вроде такой:</p>
 <pre><code>Шаг                           Модель                Токены in/out          Стоимость
@@ -488,24 +555,16 @@ print(tracker.report())</code></pre>
 шаг 1: разобрать запрос польз…claude-haiku-4-5      450/60                   $0.0008
 шаг 2: вызвать инструмент пои…claude-sonnet-4-6     1200/180                 $0.0063
 ------------------------------------------------------------------------------------
-ИТОГО: $0.0071</code></pre>
+ИТОГО: $0.0070</code></pre>
 
-      <p>Если такая таблица появилась — всё работает, можно убирать пробный файл и подключать реальные вызовы своей нейросети из шага 4.</p>
-
-      <h2>Коротко: что это даёт</h2>
-      <ul>
-        <li>Видно, сколько реально стоит каждый шаг вашего бота или агента, а не только «работает он или нет»</li>
-        <li>Не требует ни платного API-ключа для установки, ни интернета, ни сторонних библиотек — всё на голом Python</li>
-        <li>Не вмешивается в логику вашего кода — просто считает то, что вы ему передаёте</li>
-        <li>Единственное, за чем нужно следить самому — иногда заглядывать в <code class="inline">pricing.json</code> и поправлять цифры, если провайдер изменил тарифы</li>
-      </ul>
+      <p>Если такая таблица появилась, всё работает. Можно убирать пробный файл и подключать реальные вызовы своей нейросети из шага 4.</p>
 
       <h2>Что этот инструмент не делает</h2>
       <ul>
-        <li>Не вызывает нейросеть сам — только считает то, что ему передали</li>
-        <li>Не знает актуальные цены «из коробки» — справочник обновляется вручную</li>
-        <li>Не хранит историю между запусками — это счётчик на время жизни одного объекта <code class="inline">tracker</code>, а не постоянное хранилище</li>
-        <li>Не отвечает сам на вопросы в чате вроде «посчитай мне цену» — это инструмент для разработчика, а не «скилл» агента. Чтобы агент сам мог вызвать отчёт по просьбе пользователя, нужно отдельно зарегистрировать <code class="inline">report()</code> как один из вызываемых им инструментов (function calling) — сам по себе трекер этого не делает</li>
+        <li>Не вызывает нейросеть сам, а только считает то, что ему передали</li>
+        <li>Не знает актуальные цены «из коробки»: справочник приходится обновлять вручную</li>
+        <li>Не хранит историю между запусками: это счётчик на время жизни одного объекта <code class="inline">tracker</code>, а не постоянное хранилище</li>
+        <li>Не отвечает сам на вопросы в чате вроде «посчитай мне цену» — это инструмент для разработчика, а не «скилл» агента. Чтобы агент сам мог вызвать отчёт по просьбе пользователя, нужно отдельно зарегистрировать <code class="inline">report()</code> как один из вызываемых им инструментов через function calling. Сам трекер этого не делает</li>
       </ul>
 
     </div>
@@ -526,6 +585,101 @@ print(tracker.report())</code></pre>
         var next = isDark ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
+      });
+    })();
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+  <script>
+    (function() {
+      var ICON_COPY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      var ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+      function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.top = '-1000px';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      function copyText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text).catch(function() {
+            return fallbackCopy(text) ? Promise.resolve() : Promise.reject();
+          });
+        }
+        return fallbackCopy(text) ? Promise.resolve() : Promise.reject();
+      }
+
+      document.querySelectorAll('article pre').forEach(function(pre) {
+        var codeEl = pre.querySelector('code');
+        if (!codeEl) return;
+
+        if (window.hljs && /language-/.test(codeEl.className)) {
+          hljs.highlightElement(codeEl);
+        }
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'code-block';
+        pre.parentNode.insertBefore(wrapper, pre);
+
+        var collapseWrap = document.createElement('div');
+        collapseWrap.className = 'code-collapse-wrap';
+        wrapper.appendChild(collapseWrap);
+        collapseWrap.appendChild(pre);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.className = 'code-copy-btn';
+        copyBtn.setAttribute('aria-label', 'Копировать код');
+        copyBtn.innerHTML = ICON_COPY;
+        collapseWrap.appendChild(copyBtn);
+
+        copyBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          copyText(codeEl.textContent).then(function() {
+            copyBtn.classList.add('copied');
+            copyBtn.innerHTML = ICON_CHECK;
+            setTimeout(function() {
+              copyBtn.classList.remove('copied');
+              copyBtn.innerHTML = ICON_COPY;
+            }, 1600);
+          }).catch(function() {
+            copyBtn.classList.add('copy-failed');
+            setTimeout(function() { copyBtn.classList.remove('copy-failed'); }, 1600);
+          });
+        });
+
+        requestAnimationFrame(function() {
+          if (pre.scrollHeight > 300) {
+            wrapper.classList.add('collapsible');
+
+            var fade = document.createElement('div');
+            fade.className = 'code-fade';
+            collapseWrap.appendChild(fade);
+
+            collapseWrap.addEventListener('click', function(e) {
+              if (e.target.closest('.code-copy-btn')) return;
+              var selection = window.getSelection();
+              if (selection && selection.toString().length > 0) return;
+              var isExpanded = wrapper.classList.toggle('expanded');
+              if (!isExpanded) {
+                wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            });
+          }
+        });
       });
     })();
   </script>
