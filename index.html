@@ -406,6 +406,72 @@
       font-size: 0.875rem; color: var(--text2); line-height: 1.72;
     }
 
+    /* ─── TOOLS ───────────────────────────────────────────────── */
+    #tools {
+      padding: 100px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .tools-head { margin-bottom: 40px; }
+
+    .tools-list { margin-top: 36px; }
+
+    .tool-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+      border-radius: var(--r);
+      padding: 28px 32px;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.22s, box-shadow 0.22s, transform 0.22s;
+    }
+    html[data-theme="dark"] .tool-item {
+      background: var(--s1);
+      box-shadow: none;
+    }
+    html[data-theme="dark"] .tool-item:hover {
+      box-shadow: 0 8px 36px rgba(212, 82, 27, 0.20), 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .tool-item::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--grad);
+      opacity: 0; transition: opacity 0.22s;
+    }
+
+    .tool-item:hover {
+      border-color: transparent;
+      box-shadow: 0 8px 36px rgba(212, 82, 27, 0.20), 0 2px 10px rgba(0,0,0,0.08);
+      transform: translateY(-3px);
+    }
+
+    .tool-item:hover::before { opacity: 1; }
+
+    .tool-item-title {
+      font-size: 1.0625rem; font-weight: 700; letter-spacing: -0.02em;
+      color: var(--text); margin-bottom: 6px;
+    }
+
+    .tool-item-desc {
+      font-size: 0.875rem; color: var(--text2); line-height: 1.6;
+      max-width: 560px;
+    }
+
+    .tool-item-arrow {
+      font-size: 1.25rem; color: var(--orange); flex-shrink: 0;
+      transition: transform 0.22s;
+    }
+
+    .tool-item:hover .tool-item-arrow { transform: translateX(4px); }
+
+    @media (max-width: 768px) {
+      .tool-item { flex-direction: column; align-items: flex-start; gap: 14px; padding: 22px 24px; }
+    }
+
     /* ─── TIMELINE ────────────────────────────────────────────── */
     #timeline {
       padding: 72px 0;
@@ -938,6 +1004,25 @@
           <p class="val-desc">Строю сквозную аналитику и принимаю решения по данным, а не по ощущениям. Отслеживал MAU, CR, Take Rate, Approval Rate, CSI, Error Rate — по каждому каналу отдельно.</p>
         </div>
 
+      </div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section id="tools">
+    <div class="container">
+      <div class="tools-head reveal">
+        <div class="s-label">Мини-портфолио</div>
+        <h2 class="s-title">Инструменты для работы <span>с LLM и агентами</span></h2>
+      </div>
+      <div class="tools-list">
+        <a href="/cost-tracker/" class="tool-item reveal">
+          <div>
+            <div class="tool-item-title">CostTracker</div>
+            <div class="tool-item-desc">Счётчик реальной стоимости вызовов модели по шагам агента — без внешних зависимостей, копируется в любой проект.</div>
+          </div>
+          <div class="tool-item-arrow">→</div>
+        </a>
       </div>
     </div>
   </section>

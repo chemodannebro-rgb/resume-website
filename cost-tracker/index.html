@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <title>CostTracker — счётчик стоимости вызовов LLM | Алексей Лисин</title>
+  <meta name="description" content="Простой инструмент для подсчёта реальной стоимости вызовов LLM по шагам агента. Без зависимостей, копируется в любой проект." />
+  <meta property="og:title" content="CostTracker — счётчик стоимости вызовов LLM" />
+  <meta property="og:description" content="Простой инструмент для подсчёта реальной стоимости вызовов LLM по шагам агента. Без зависимостей, копируется в любой проект." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://lisinaleksei.tech/cost-tracker/" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../favicon-32v2.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="../favicon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #FFFFFF;
+      --s1:       #F5F3EF;
+      --s2:       #EDEAE3;
+      --s3:       #E3DFD6;
+      --border:   rgba(0,0,0,0.08);
+      --border2:  rgba(0,0,0,0.15);
+      --text:     #1C1917;
+      --text2:    #4A4540;
+      --muted:    #7A6E62;
+      --orange:   #D4521B;
+      --orange2:  #E8632A;
+      --violet:   #6B4FC8;
+      --violet2:  #8B6EE0;
+      --grad:     linear-gradient(135deg, #D4521B 0%, #6B4FC8 100%);
+      --grad2:    linear-gradient(135deg, #E8632A 0%, #8B6EE0 100%);
+      --r:        14px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.35s ease, color 0.35s ease;
+    }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--s2); border-radius: 3px; }
+
+    .container { max-width: 760px; margin: 0 auto; padding: 0 40px; }
+
+    /* ─── TOP BAR ─────────────────────────────────────────────── */
+    .topbar {
+      padding: 32px 0 0;
+    }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 0.8125rem; font-weight: 600; color: var(--muted);
+      text-decoration: none; transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--orange); }
+
+    /* ─── ARTICLE HEADER ──────────────────────────────────────── */
+    .art-head {
+      padding: 48px 0 56px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .s-label {
+      font-size: 0.6875rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: var(--grad2);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 14px; display: inline-block;
+    }
+
+    .art-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+      margin-bottom: 18px;
+    }
+
+    .art-lede {
+      font-size: 1.0625rem; color: var(--text2); line-height: 1.75;
+      max-width: 640px;
+    }
+
+    /* ─── ARTICLE BODY ────────────────────────────────────────── */
+    article { padding: 56px 0 100px; }
+
+    article h2 {
+      font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em;
+      margin: 56px 0 18px;
+    }
+
+    article h2:first-child { margin-top: 0; }
+
+    article h3 {
+      font-size: 1.125rem; font-weight: 700; letter-spacing: -0.015em;
+      color: var(--text); margin: 36px 0 14px;
+    }
+
+    article p {
+      font-size: 0.9375rem; color: var(--text2); line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    article ul, article ol {
+      margin: 0 0 16px 22px;
+      color: var(--text2); font-size: 0.9375rem; line-height: 1.8;
+    }
+
+    article li { margin-bottom: 6px; }
+
+    article strong { color: var(--text); font-weight: 700; }
+
+    article code.inline {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85em;
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 1px 6px;
+      color: var(--orange);
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.8125rem; line-height: 1.65;
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px 22px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+      color: var(--text2);
+    }
+
+    pre code { color: inherit; white-space: pre; }
+
+    .callout {
+      background: rgba(155,127,234,0.06);
+      border: 1px solid rgba(155,127,234,0.22);
+      border-radius: var(--r);
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      font-size: 0.9375rem; color: var(--text2); line-height: 1.75;
+    }
+
+    .callout strong { color: var(--violet2); }
+
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--grad2); color: #fff;
+      font-size: 0.75rem; font-weight: 700;
+      margin-right: 10px; flex-shrink: 0;
+    }
+
+    article h2.step {
+      display: flex; align-items: center;
+    }
+
+    /* ─── FOOTER NAV ──────────────────────────────────────────── */
+    .art-footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0 48px;
+    }
+
+    /* ─── THEME TOGGLE ────────────────────────────────────────── */
+    .theme-toggle {
+      position: fixed; top: 24px; right: 28px; z-index: 150;
+      width: 44px; height: 44px; border-radius: 50%;
+      border: 1.5px solid var(--border2);
+      background: var(--s1);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+      outline: none; padding: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.35s ease, border-color 0.35s ease;
+    }
+
+    .theme-toggle:hover { transform: scale(1.1); box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+    .theme-toggle:active { transform: scale(0.95); }
+
+    .theme-toggle svg {
+      width: 18px; height: 18px; position: absolute;
+      transition: opacity 0.3s ease, transform 0.35s ease;
+    }
+
+    .icon-sun  { color: var(--orange); opacity: 1; transform: rotate(0deg) scale(1); }
+    .icon-moon { color: var(--violet2); opacity: 0; transform: rotate(-90deg) scale(0.5); }
+
+    html[data-theme="dark"] .icon-sun  { opacity: 0; transform: rotate(90deg) scale(0.5); }
+    html[data-theme="dark"] .icon-moon { opacity: 1; transform: rotate(0deg) scale(1); }
+
+    /* ─── DARK THEME ──────────────────────────────────────────── */
+    html[data-theme="dark"] {
+      --bg:      #111009;
+      --s1:      #181610;
+      --s2:      #201D15;
+      --s3:      #28251C;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.13);
+      --text:    #F0EBE0;
+      --text2:   #C0B8AD;
+      --muted:   #8A7E6E;
+    }
+
+    /* ─── MOBILE ──────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .container { padding: 0 22px; }
+      pre { padding: 16px 16px; font-size: 0.75rem; }
+      .theme-toggle { width: 34px; height: 34px; top: 16px; right: 16px; }
+      .theme-toggle svg { width: 14px; height: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="12" cy="12" r="4.5"/>
+      <line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+
+  <div class="topbar">
+    <div class="container">
+      <a href="/" class="back-link">← На главную</a>
+    </div>
+  </div>
+
+  <header class="art-head">
+    <div class="container">
+      <div class="s-label">Мини-портфолио · Инструмент 1</div>
+      <h1 class="art-title">CostTracker</h1>
+      <p class="art-lede">Простой счётчик стоимости вызовов LLM. Один файл, ноль внешних зависимостей — копируете в свой проект и сразу пользуетесь.</p>
+    </div>
+  </header>
+
+  <article>
+    <div class="container">
+
+      <h2>Зачем это нужно</h2>
+      <p>Если вы используете нейросеть (ChatGPT, Claude и подобные) через программный доступ (API) — каждый запрос стоит денег. Цена списывается не «за сообщение», а за количество <strong>токенов</strong> — это кусочки, на которые нейросеть разбивает текст (примерно ¾ слова). Чем длиннее вопрос и чем длиннее ответ — тем дороже запрос.</p>
+      <p>Если у вас не один запрос, а цепочка из нескольких — например, агент сначала разбирает вопрос, потом ищет информацию, потом формирует ответ — на глаз посчитать, сколько всё это стоило, почти невозможно.</p>
+      <p><strong>CostTracker</strong> решает именно это: после каждого запроса к нейросети вы одной строкой сообщаете ему, сколько было потрачено токенов, а он сам считает стоимость в долларах и в конце показывает понятную таблицу с итогом.</p>
+
+      <h2>Как это устроено</h2>
+      <p>Инструмент <strong>не оборачивает</strong> и не заменяет ваш запрос к нейросети. Он ничего не знает про Anthropic, OpenAI или любой другой сервис — и не пытается быть посредником между вами и API. Вы вызываете модель ровно так, как вызывали раньше, а сразу после ответа одной строкой сообщаете трекеру, сколько токенов потрачено — это значение сервис и так возвращает вместе с ответом.</p>
+      <p>Инструмент не отслеживает ваш код сам и не «видит» диалог с нейросетью — он строго реагирует на то, что вы явно ему передали. «Шаг» в отчёте — это не то, что инструмент сам обнаружил, а ровно один вызов, который вы сами залогировали. Если забыть добавить строку после какого-то из запросов — этот запрос просто не попадёт в отчёт, без предупреждения об ошибке.</p>
+
+      <h2>Что нужно, чтобы начать</h2>
+      <ul>
+        <li>Python (подойдёт практически любая версия, начиная с 3.7)</li>
+        <li>Свой код, который уже обращается к нейросети (через Anthropic, OpenAI или любой другой сервис) — CostTracker не заменяет и не трогает эту часть, а просто досчитывает стоимость рядом</li>
+      </ul>
+      <p>Если своего кода с обращением к нейросети пока нет — можно всё равно скопировать инструмент и попробовать на готовом примере из шага 5, чтобы увидеть, как это работает.</p>
+
+      <h2 class="step"><span class="step-num">1</span> Создайте папку и два файла</h2>
+      <p>В своём проекте создайте папку, например <code class="inline">cost_tracker</code>, и положите в неё два файла: <code class="inline">cost_tracker.py</code> и <code class="inline">pricing.json</code>.</p>
+
+      <h2 class="step"><span class="step-num">2</span> Скопируйте это в файл cost_tracker.py</h2>
+<pre><code>"""
+CostTracker — простой счётчик стоимости вызовов LLM.
+"""
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Optional
+
+PRICING_FILE = Path(__file__).parent / "pricing.json"
+
+
+@dataclass
+class CallRecord:
+    label: str
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cost: Optional[float]  # None, если цена модели неизвестна
+
+
+class CostTracker:
+    def __init__(self, pricing_file: Path = PRICING_FILE):
+        self._pricing = self._load_pricing(pricing_file)
+        self._calls: List[CallRecord] = []
+
+    @staticmethod
+    def _load_pricing(path: Path) -> dict:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data.pop("_meta", None)
+        return data
+
+    def log_call(
+        self,
+        model: str,
+        input_tokens: int,
+        output_tokens: int,
+        label: str = "",
+    ) -> Optional[float]:
+        """Записывает один вызов модели и возвращает его стоимость (или None)."""
+        cost = self._calculate_cost(model, input_tokens, output_tokens)
+        record = CallRecord(
+            label=label or f"вызов {len(self._calls) + 1}",
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+        )
+        self._calls.append(record)
+        return cost
+
+    def _calculate_cost(self, model, input_tokens, output_tokens):
+        price = self._pricing.get(model)
+        if price is None:
+            return None
+        input_cost = input_tokens / 1_000_000 * price["input"]
+        output_cost = output_tokens / 1_000_000 * price["output"]
+        return input_cost + output_cost
+
+    def total_cost(self) -> float:
+        return sum(c.cost for c in self._calls if c.cost is not None)
+
+    @staticmethod
+    def _fit(text: str, width: int) -> str:
+        if len(text) > width:
+            return text[: width - 1] + "…"
+        return text.ljust(width)
+
+    def report(self) -> str:
+        """Читаемый построчный отчёт по шагам + итог."""
+        if not self._calls:
+            return "Пока нет ни одного зафиксированного вызова."
+
+        label_w, model_w, tokens_w = 30, 22, 16
+        header = (
+            f"{self._fit('Шаг', label_w)}{self._fit('Модель', model_w)}"
+            f"{self._fit('Токены in/out', tokens_w)}{'Стоимость':&gt;16}"
+        )
+        lines = [header, "-" * len(header)]
+
+        for c in self._calls:
+            tokens = f"{c.input_tokens}/{c.output_tokens}"
+            cost_str = f"${c.cost:.4f}" if c.cost is not None else "цена неизвестна"
+            lines.append(
+                f"{self._fit(c.label, label_w)}{self._fit(c.model, model_w)}"
+                f"{self._fit(tokens, tokens_w)}{cost_str:&gt;16}"
+            )
+
+        lines.append("-" * len(header))
+        has_unknown = any(c.cost is None for c in self._calls)
+        total_line = f"ИТОГО: ${self.total_cost():.4f}"
+        if has_unknown:
+            total_line += "  (шаги с неизвестной ценой не учтены)"
+        lines.append(total_line)
+
+        return "\n".join(lines)
+</code></pre>
+
+      <h2 class="step"><span class="step-num">3</span> Скопируйте это в файл pricing.json</h2>
+      <p>Это справочник цен — во сколько обходится каждая нейросеть.</p>
+
+      <h3>Как читать эти числа</h3>
+      <p>У каждой модели два числа: <code class="inline">input</code> и <code class="inline">output</code>.</p>
+      <ul>
+        <li><strong>input</strong> — во сколько обходится то, что вы <strong>отправляете</strong> нейросети (ваш вопрос, инструкции, документы). Это то, что модель <strong>читает</strong>.</li>
+        <li><strong>output</strong> — во сколько обходится то, что нейросеть <strong>отвечает</strong>. Это то, что модель <strong>написала</strong>. Ответ почти всегда дороже вопроса.</li>
+      </ul>
+      <p>Оба числа — это <strong>доллары за 1 000 000 (один миллион) токенов</strong>, ровно так, как их публикует сам сервис на своей странице цен. Не «доллар за токен» — токенов в одном запросе обычно от силы пара тысяч, поэтому цену считают именно на миллион, иначе получались бы неудобные копейки вроде $0.000003. Само число токенов вам считать не нужно — его возвращает сервис вместе с каждым ответом, вы просто передаёте его трекеру как есть.</p>
+
+<pre><code>{
+  "_meta": {
+    "note": "Цены за 1 000 000 токенов, в долларах. Официального API 'текущая цена' ни у одного провайдера нет — эти цифры сверены вручную по документации на дату ниже.",
+    "checked_on": "2026-07-02",
+    "sources": [
+      "https://platform.claude.com/docs/en/about-claude/pricing",
+      "https://developers.openai.com/api/docs/pricing"
+    ]
+  },
+  "claude-opus-4-6": { "input": 5.0, "output": 25.0 },
+  "claude-sonnet-4-6": { "input": 3.0, "output": 15.0 },
+  "claude-haiku-4-5": { "input": 1.0, "output": 5.0 },
+  "gpt-5": { "input": 1.25, "output": 10.0 },
+  "gpt-5-mini": { "input": 0.25, "output": 2.0 },
+  "gpt-4.1": { "input": 2.0, "output": 8.0 },
+  "gpt-4.1-mini": { "input": 0.40, "output": 1.60 },
+  "gpt-4o-mini": { "input": 0.15, "output": 0.60 },
+  "local-model": { "input": 0.0, "output": 0.0 }
+}
+</code></pre>
+
+      <p><strong>Пример расчёта:</strong> один вызов с 1200 входными и 180 выходными токенами на модели <code class="inline">claude-sonnet-4-6</code> ($3 / $15 за миллион):</p>
+<pre><code>input_cost  = 1200 / 1_000_000 * 3.0   = $0.0036
+output_cost = 180  / 1_000_000 * 15.0  = $0.0027
+итого       = $0.0036 + $0.0027 = $0.0063</code></pre>
+
+      <div class="callout"><strong>Важный нюанс.</strong> Ни один провайдер — ни Anthropic, ни OpenAI — не даёт способа узнать «текущую цену» автоматически, такого API попросту не существует. Цены время от времени меняются вручную самим провайдером, поэтому раз в какое-то время стоит заглянуть на официальную страницу цен и поправить нужное число в этом файле. Код трогать при этом не нужно — только цифры в JSON.</div>
+
+      <p>Если модели, которую вы используете, нет в списке — ничего страшного: программа не сломается, просто в отчёте у этого шага будет написано «цена неизвестна» вместо суммы. Можно просто дописать свою строку с моделью и её ценой по такому же образцу.</p>
+
+      <h2 class="step"><span class="step-num">4</span> Как это использовать в своём коде</h2>
+      <p>Ваш обычный код, где вы обращаетесь к нейросети, <strong>менять не нужно</strong>. Добавляется только одна строка сразу после ответа — вы берёте из ответа количество потраченных токенов (сервис возвращает эту информацию сам) и передаёте трекеру.</p>
+
+<pre><code>from cost_tracker import CostTracker
+
+tracker = CostTracker()
+
+# ваш обычный запрос к нейросети — как и раньше, без изменений
+response = client.messages.create(...)
+
+# одна новая строка сразу после ответа:
+tracker.log_call(
+    model="claude-sonnet-4-6",
+    input_tokens=response.usage.input_tokens,
+    output_tokens=response.usage.output_tokens,
+    label="разбор вопроса пользователя",  # необязательно, просто подпись для отчёта
+)
+
+# когда захотите посмотреть, сколько всё стоило:
+print(tracker.report())</code></pre>
+
+      <p>Если используете OpenAI — то же самое, просто поля с токенами называются иначе:</p>
+
+<pre><code>response = client.chat.completions.create(...)
+tracker.log_call(
+    model="gpt-4.1",
+    input_tokens=response.usage.prompt_tokens,
+    output_tokens=response.usage.completion_tokens,
+)</code></pre>
+
+      <p><code class="inline">tracker.report()</code> можно вызывать где угодно и когда угодно — хоть после каждого ответа, хоть в самом конце. Сам он ничего никуда не выводит и не сохраняет — печатает то, что вы попросите, и когда попросите.</p>
+
+      <div class="callout"><strong>Если вызовов модели несколько.</strong> Если ваш агент делает не один, а несколько обращений к модели подряд (например: сначала разобрать запрос, потом поискать информацию, потом собрать ответ) — строку <code class="inline">log_call()</code> нужно вставлять после каждого такого обращения, а не один раз в начале. Инструмент не отслеживает ваш код сам и не знает, сколько раз вы обращались к модели — он видит ровно столько шагов, сколько раз вы сами вызвали <code class="inline">log_call()</code>. Если забыть вставить эту строку после одного из вызовов — этот вызов просто не попадёт в отчёт, без какого-либо предупреждения об ошибке.</div>
+
+      <h2 class="step"><span class="step-num">5</span> Проверьте, что всё работает</h2>
+      <p>Если хотите сразу увидеть, как выглядит результат — без реального запроса к нейросети — создайте рядом третий файл <code class="inline">try_it.py</code> с таким содержимым:</p>
+
+<pre><code>from cost_tracker import CostTracker
+
+tracker = CostTracker()
+
+tracker.log_call(
+    model="claude-haiku-4-5",
+    input_tokens=450,
+    output_tokens=60,
+    label="шаг 1: разобрать запрос пользователя",
+)
+
+tracker.log_call(
+    model="claude-sonnet-4-6",
+    input_tokens=1200,
+    output_tokens=180,
+    label="шаг 2: вызвать инструмент поиска",
+)
+
+print(tracker.report())</code></pre>
+
+      <p>И запустите его в терминале:</p>
+<pre><code>python3 try_it.py</code></pre>
+
+      <p>Вы увидите готовую таблицу вроде такой:</p>
+<pre><code>Шаг                           Модель                Токены in/out          Стоимость
+------------------------------------------------------------------------------------
+шаг 1: разобрать запрос польз…claude-haiku-4-5      450/60                   $0.0008
+шаг 2: вызвать инструмент пои…claude-sonnet-4-6     1200/180                 $0.0063
+------------------------------------------------------------------------------------
+ИТОГО: $0.0071</code></pre>
+
+      <p>Если такая таблица появилась — всё работает, можно убирать пробный файл и подключать реальные вызовы своей нейросети из шага 4.</p>
+
+      <h2>Коротко: что это даёт</h2>
+      <ul>
+        <li>Видно, сколько реально стоит каждый шаг вашего бота или агента, а не только «работает он или нет»</li>
+        <li>Не требует ни платного API-ключа для установки, ни интернета, ни сторонних библиотек — всё на голом Python</li>
+        <li>Не вмешивается в логику вашего кода — просто считает то, что вы ему передаёте</li>
+        <li>Единственное, за чем нужно следить самому — иногда заглядывать в <code class="inline">pricing.json</code> и поправлять цифры, если провайдер изменил тарифы</li>
+      </ul>
+
+      <h2>Что этот инструмент не делает</h2>
+      <ul>
+        <li>Не вызывает нейросеть сам — только считает то, что ему передали</li>
+        <li>Не знает актуальные цены «из коробки» — справочник обновляется вручную</li>
+        <li>Не хранит историю между запусками — это счётчик на время жизни одного объекта <code class="inline">tracker</code>, а не постоянное хранилище</li>
+        <li>Не отвечает сам на вопросы в чате вроде «посчитай мне цену» — это инструмент для разработчика, а не «скилл» агента. Чтобы агент сам мог вызвать отчёт по просьбе пользователя, нужно отдельно зарегистрировать <code class="inline">report()</code> как один из вызываемых им инструментов (function calling) — сам по себе трекер этого не делает</li>
+      </ul>
+
+    </div>
+  </article>
+
+  <div class="art-footer">
+    <div class="container">
+      <a href="/" class="back-link">← На главную</a>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      btn.addEventListener('click', function() {
+        var isDark = root.getAttribute('data-theme') === 'dark';
+        var next = isDark ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    })();
+  </script>
+</body>
+</html>
