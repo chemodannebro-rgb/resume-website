@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    window.addEventListener('pageshow', function(e) { window.scrollTo(0, 0); });
+    window.addEventListener('load', function() { window.scrollTo(0, 0); });
+    // apply saved theme before render to avoid flash
+    (function() {
+      var t = localStorage.getItem('theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <title>LLM Burnwatch — локальный контроль расходов на LLM | Алексей Лисин</title>
+  <meta name="description" content="Локальный сторож расходов на вызовы LLM: сам учится норме и предупреждает об аномалиях — зацикливание агента, скачок цены, превышение бюджета." />
+  <meta property="og:title" content="LLM Burnwatch — локальный контроль расходов на LLM" />
+  <meta property="og:description" content="Локальный сторож расходов на вызовы LLM: сам учится норме и предупреждает об аномалиях — зацикливание агента, скачок цены, превышение бюджета." />
+  <meta property="og:type" content="article" />
+  <meta property="og:url" content="https://lisinaleksei.tech/llm-burnwatch/" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="LLM Burnwatch — локальный контроль расходов на LLM" />
+  <meta name="twitter:description" content="Локальный сторож расходов на вызовы LLM: сам учится норме и предупреждает об аномалиях." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32v2.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700;1,800&family=Merriweather:wght@400;700&family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main-burnwatch.tsx"></script>
+</body>
+</html>
